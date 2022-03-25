@@ -20,14 +20,6 @@ public class Currency {
         this.value = value;
     }
 
-    public String getId() {
-        return id;
-    }
-
-    public void setId(String id) {
-        this.id = id;
-    }
-
     public String getCurrencyType() {
         return currencyType;
     }
@@ -44,21 +36,6 @@ public class Currency {
         this.value = value;
     }
 
-    @Override
-    public String toString() {
-        return "Currency{" +
-                "id='" + id + '\'' +
-                ", currencyType='" + currencyType + '\'' +
-                ", value=" + value +
-                '}';
-    }
-    public Double compareTo(Currency currency) {
-
-        Double compareQuantity = ((Currency) currency).getValue();
-
-        return this.value - compareQuantity;
-
-    }
 
     public static Comparator<Currency> ValueComporator
             = new Comparator<Currency>() {

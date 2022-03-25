@@ -1,11 +1,9 @@
 package com.test.demo;
 
-
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.context.event.ApplicationReadyEvent;
 import org.springframework.context.event.EventListener;
 import org.springframework.data.domain.Sort;
-import org.springframework.data.mongodb.core.aggregation.ProjectionOperation;
 
 import java.io.BufferedReader;
 import java.io.IOException;
@@ -25,36 +23,68 @@ public class Service{
     public Service(Repos repos){
         this.repos = repos;
     }
-    public void addTo(Currency currency){
-        ProjectionOperation project;
-        repos.save(currency);
-    }
-    public Currency getTheSmallest(String currencyType){
-        return repos.findItemByCurrencyType(currencyType,Sort.by(Sort.Direction.ASC, "value")).get(0);
 
+    public Currency getTheSmallest(String currencyType){
+        if(repos.findItemByCurrencyTypeUnSorted(currencyType).size() == 0)
+            throw new Exeptions.NotFoundException();
+
+        return repos.findItemByCurrencyType(currencyType,Sort.by(Sort.Direction.ASC, "value")).get(0);
     }
+
     public Currency getTheBiggest(String currencyType){
+        if(repos.findItemByCurrencyTypeUnSorted(currencyType).size() == 0)
+            throw new Exeptions.NotFoundException();
+
         return repos.findItemByCurrencyType(currencyType,Sort.by(Sort.Direction.DESC, "value")).get(0);
     }
 
-    public List<Currency> getPages(int count, int size){
-        System.out.println(repos.findAll().subList(count*size,count*size+size));
-        List<Currency> obj = repos.findAll().subList(count*size,count*size+size);
-        obj.sort(ValueComporator);
-        return obj;
+    public List<Currency> getPages(String currencyType,int count, int size){
+        if(repos.findItemByCurrencyTypeUnSorted(currencyType).size() == 0)
+            throw new Exeptions.NotFoundException();
+        try{
+
+            int size2 = repos.findItemByCurrencyTypeUnSorted(currencyType).size();
+            int from = count*size;
+            int to = count*size+size;
+            if (from>size2)
+                throw new RuntimeException();
+            if (to>size2)
+                to = size2;
+
+            List<Currency> obj = repos.findItemByCurrencyTypeUnSorted(currencyType).subList(from,to);
+            obj.sort(ValueComporator);
+            return obj;
+        }catch (RuntimeException ex){
+            throw new Exeptions.ThereIsNoSuchPage();
+        }
     }
+
     @EventListener(ApplicationReadyEvent.class)
     public void timer() {
         Timer timer = new Timer();
         timer.schedule(new TimerTask() {
             @Override
             public void run() {
-//                req("https://cex.io/api/last_price/BTC/USD");
-//                req("https://cex.io/api/last_price/ETH/USD");
-//                req("https://cex.io/api/last_price/XRP/USD");
+                req("https://cex.io/api/last_price/BTC/USD");
+                req("https://cex.io/api/last_price/ETH/USD");
+                req("https://cex.io/api/last_price/XRP/USD");
             }
-        }, 0, (1000 * 60) * 2);
+        }, 0, (1000 * 60) * 60);
     }
+
+
+
+    public List<String> HighestAndLowest(String currency){
+        List<String> list = new ArrayList<>();
+
+        List<Currency> toWorkWith = repos.findItemByCurrencyType(currency,Sort.by(Sort.Direction.ASC, "value"));
+
+        list.add(toWorkWith.get(0).getCurrencyType());
+        list.add(toWorkWith.get(0).getValue().toString());
+        list.add(toWorkWith.get(toWorkWith.size()-1).getValue().toString());
+       return list;
+    }
+
 
     public void req(String input){
         try {
